@@ -82,4 +82,8 @@ npm run verify
 
 例如，当前 `0.1.1` 版本必须使用标签 `0.1.1`。
 
+## 📄 许可证
+
+本项目基于 [MIT License](./LICENSE) 开源。
+
 详细设计见 `docs/plans/2026-08-08-technical-development-plan.md`。
