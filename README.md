@@ -37,4 +37,14 @@ npm run verify
 - `npm run verify`
 - `npm run package`（生成仅含 main.js、manifest.json、styles.css 的 `dist/hexo-send/`）
 
+## 发布版本
+
+推送与 `package.json`、`manifest.json` 版本一致的 `v*` 标签后，GitHub Actions 会执行完整质量门并创建 Release。Release 同时提供：
+
+- `hexo-send-<version>.zip` 安装包
+- Obsidian/BRAT 可直接读取的 `main.js`、`manifest.json`、`styles.css`
+- `SHA256SUMS.txt` 完整性校验文件
+
+例如，当前 `0.1.1` 版本使用标签 `v0.1.1`。
+
 详细设计见 `docs/plans/2026-08-08-technical-development-plan.md`。

@@ -1,0 +1,81 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify source
+        run: npm run verify
+
+      - name: Validate release version
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync } from "node:fs";
+
+          const tagVersion = process.env.GITHUB_REF_NAME.replace(/^v/, "");
+          const packageVersion = JSON.parse(readFileSync("package.json", "utf8")).version;
+          const manifestVersion = JSON.parse(readFileSync("manifest.json", "utf8")).version;
+
+          if (tagVersion !== packageVersion || tagVersion !== manifestVersion) {
+            throw new Error(
+              `Tag ${tagVersion}, package ${packageVersion}, and manifest ${manifestVersion} must match.`,
+            );
+          }
+          NODE
+
+      - name: Assemble release assets
+        shell: bash
+        run: |
+          node scripts/package.mjs
+          version="${GITHUB_REF_NAME#v}"
+          mkdir -p release
+          cp dist/hexo-send/main.js release/main.js
+          cp dist/hexo-send/manifest.json release/manifest.json
+          cp dist/hexo-send/styles.css release/styles.css
+          (cd dist/hexo-send && zip -9 -r "../../release/hexo-send-${version}.zip" .)
+          (cd release && sha256sum main.js manifest.json styles.css "hexo-send-${version}.zip" > SHA256SUMS.txt)
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          gh release create "$GITHUB_REF_NAME" \
+            release/main.js \
+            release/manifest.json \
+            release/styles.css \
+            "release/hexo-send-${version}.zip" \
+            release/SHA256SUMS.txt \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "Hexo Send ${version}" \
+            --generate-notes \
+            --verify-tag
