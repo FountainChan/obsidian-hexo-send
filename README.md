@@ -80,7 +80,7 @@ npm run verify
 - Obsidian/BRAT 可直接读取的 `main.js`、`manifest.json`、`styles.css`
 - `SHA256SUMS.txt` 完整性校验文件
 
-例如，当前 `0.1.1` 版本必须使用标签 `0.1.1`。
+例如，当前 `0.1.2` 版本必须使用标签 `0.1.2`。
 
 ## 📄 许可证
 

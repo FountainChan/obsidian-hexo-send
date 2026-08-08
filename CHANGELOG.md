@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.2
+
+- 调整社区插件市场描述，移除目录上下文中重复的 “Obsidian” 字样。
+
 ## 0.1.1
 
 - 修复预发布 Modal 内 Ctrl+C/Ctrl+V 被 Obsidian 文件树快捷键抢占的问题。

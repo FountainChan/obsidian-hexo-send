@@ -1,9 +1,9 @@
 {
   "id": "hexo-send",
   "name": "Hexo Send",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "minAppVersion": "1.11.4",
-  "description": "Prepare Obsidian notes for Hexo, create a local commit, and push only after confirmation.",
+  "description": "Prepare notes for Hexo, create a local commit, and push only after confirmation.",
   "author": "FountainChan",
   "isDesktopOnly": true
 }
