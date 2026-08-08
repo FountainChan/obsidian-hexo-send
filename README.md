@@ -18,7 +18,7 @@ Hexo Send is a desktop-only plugin that pre-releases selected Markdown files, fo
 
 ## 📋 Requirements
 
-- Desktop Obsidian 1.11.4 or later.
+- Desktop Obsidian 1.13.0 or later.
 - A trusted local Hexo Git repository with its dependencies already installed.
 - A repository-local Hexo CLI at `node_modules/hexo/bin/hexo` and a configured `hexo-abbrlink` package.
 - Node.js and Git available on the desktop system.
@@ -58,10 +58,10 @@ Hexo Send is desktop-only because its core workflow intentionally connects Obsid
 
 ### Process execution
 
-- The plugin starts Git and the user-configured Node.js executable. Node.js runs only the Hexo CLI installed inside the selected repository.
-- When an image-download proxy is configured, the plugin may start `curl.exe`; every redirect target is revalidated to reject localhost and private-network destinations.
+- The plugin starts Git and Node.js resolved from the system `PATH`. Executable lookup does not use the selected repository as a search location. Node.js runs only the Hexo CLI installed inside that repository.
+- Remote images are downloaded with a streaming Node.js HTTP(S) client that pins each validated public IP and revalidates every redirect.
 - Processes are started with `shell: false` and separate argument arrays. User content is never concatenated into a shell command.
-- Hexo plugins, Hexo themes, Git hooks, and configured executable paths are executable code. Use only repositories, dependencies, hooks, and executable paths that you trust.
+- Hexo plugins, Hexo themes, and Git hooks are executable code. Use only repositories, dependencies, and hooks that you trust.
 - The plugin runs `hexo clean`, `hexo generate --bail`, and narrowly scoped Git inspection, staging, commit, and push commands. `git push` is available only after explicit confirmation.
 
 ### Clipboard

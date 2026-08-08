@@ -18,7 +18,7 @@ Hexo Send 是一个仅支持桌面端的插件。它可以把选中的 Markdown 
 
 ## 📋 运行要求
 
-- 桌面版 Obsidian 1.11.4 或更高版本。
+- 桌面版 Obsidian 1.13.0 或更高版本。
 - 已安装依赖且可信的本地 Hexo Git 仓库。
 - 仓库中存在 `node_modules/hexo/bin/hexo`，并已配置 `hexo-abbrlink`。
 - 桌面系统可以使用 Node.js 和 Git。
@@ -58,10 +58,10 @@ Hexo Send 仅支持桌面端，因为核心流程需要把 Obsidian 连接到本
 
 ### 进程执行
 
-- 插件会启动 Git 和用户配置的 Node.js；Node.js 只执行所选仓库中已经安装的 Hexo CLI。
-- 配置图片下载代理时，插件可能启动 `curl.exe`；每一次重定向都会重新检查并拒绝本机和私网地址。
+- 插件会从系统 `PATH` 解析并启动 Git 和 Node.js，解析程序路径时不会把所选仓库作为搜索位置；Node.js 只执行该仓库中已经安装的 Hexo CLI。
+- 远程图片通过流式 Node.js HTTP(S) 客户端下载；每次连接固定到已经验证的公网 IP，每一次重定向都会重新验证。
 - 所有进程都使用 `shell: false` 和独立参数数组，不会把文章内容拼接成 Shell 命令。
-- Hexo 插件、Hexo 主题、Git hooks 和自定义可执行文件路径都属于可执行代码。请只使用可信的仓库、依赖、hooks 和程序路径。
+- Hexo 插件、Hexo 主题和 Git hooks 都属于可执行代码。请只使用可信的仓库、依赖和 hooks。
 - 插件执行 `hexo clean`、`hexo generate --bail` 以及范围受控的 Git 检测、暂存、commit 和 push 命令。只有用户明确确认后才会执行 `git push`。
 
 ### 剪贴板

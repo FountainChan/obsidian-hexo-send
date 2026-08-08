@@ -24,8 +24,8 @@ export class PublishCoordinator {
     const controller = new AbortController(); this.active = controller;
     const state = new PublishStateMachine("awaiting_review"); const diagnostics: DiagnosticEvent[] = []; const results: ArticleResult[] = [];
     const emit = (message: string, current = 0, total = plan.articles.length) => progress({ state: state.state, message, current, total });
-    const git = new GitService(this.runner, settings.gitExecutable); const hexo = new HexoService(this.runner, settings.nodeExecutable);
-    const safeFs = new SafeFileSystem(plan.repositoryPath); const journal = new TempJobJournal(plan.repositoryPath, plan.id); const assetService = new AssetService(this.runner);
+    const git = new GitService(this.runner); const hexo = new HexoService(this.runner);
+    const safeFs = new SafeFileSystem(plan.repositoryPath); const journal = new TempJobJournal(plan.repositoryPath, plan.id); const assetService = new AssetService();
     let createdCommitHash: string | undefined;
     try {
       const snapshot = await git.assertSafeForWrite(plan.repositoryPath);
@@ -49,7 +49,7 @@ export class PublishCoordinator {
       for (const [index, article] of plan.articles.entries()) {
         const abbrlink = article.action === "update" && article.metadata.abbrlink ? article.metadata.abbrlink : await hexo.readAbbrlink(plan.repositoryPath, article.targetRelativePath);
         if (abbrlinks.has(abbrlink)) throw new HexoSendError("HEXO_VALIDATION_FAILED", `批次内 abbrlink 重复：${abbrlink}`); abbrlinks.add(abbrlink);
-        const assets = await assetService.process({ repositoryPath: plan.repositoryPath, imagesDir: environment.imagesDir, abbrlink, body: article.body, images: article.images, resolveLocal, proxy: settings.imageProxy || undefined, signal: controller.signal, allowRemoteFallback: article.allowRemoteImageFallback,
+        const assets = await assetService.process({ repositoryPath: plan.repositoryPath, imagesDir: environment.imagesDir, abbrlink, body: article.body, images: article.images, resolveLocal, signal: controller.signal, allowRemoteFallback: article.allowRemoteImageFallback,
           beforeWrite: async (relative) => { if(baselineChanged.has(relative)) throw new HexoSendError("GIT_UNSAFE",`目标图片已有未提交修改：${relative}`); await journal.begin([relative]); } });
         for (const assetPath of assets.paths) actualPaths.add(assetPath);
         const metadata = { ...article.metadata, abbrlink, topImg: assets.firstImage, cover: assets.firstImage };

@@ -21,9 +21,12 @@ describe("TempJobJournal",()=>{
   it("rejects a tampered recovery path",async()=>{
     repository=await fs.mkdtemp(path.join(os.tmpdir(),"hexo-send-journal-repo-"));
     const journal=new TempJobJournal(repository); directory=journal.directory; await journal.begin(["new.md"]);
-    const journalPath=path.join(directory,"journal.json"); const record=JSON.parse(await fs.readFile(journalPath,"utf8")) as {files:Record<string,unknown>};
-    record.files["../outside.md"]=record.files["new.md"] as unknown; delete record.files["new.md"];
+    const journalPath=path.join(directory,"journal.json"); const record:unknown=JSON.parse(await fs.readFile(journalPath,"utf8"));
+    if(!isRecord(record)||!isRecord(record.files))throw new Error("Invalid journal fixture");
+    record.files["../outside.md"]=record.files["new.md"]; delete record.files["new.md"];
     await fs.writeFile(journalPath,JSON.stringify(record));
     await expect(TempJobJournal.infoAt(directory)).rejects.toThrow();
   });
 });
+
+const isRecord=(value:unknown):value is Record<string,unknown>=>typeof value==="object"&&value!==null;

@@ -49,7 +49,7 @@ export class EnvironmentDetector {
         add(key, label, "failure", error instanceof Error ? error.message : String(error), true, "目录必须位于 Hexo 仓库内且不能是符号链接");
       }
     }
-    const git = new GitService(this.runner, settings.gitExecutable);
+    const git = new GitService(this.runner);
     const snapshot = await git.inspect(repositoryPath);
     add("git", "Git 仓库", "pass", snapshot.head.slice(0, 12));
     add("git-identity", "Git 身份", snapshot.identity.includes("<") ? "pass" : "failure", snapshot.identity || "未配置", !snapshot.identity.includes("<"), "配置 user.name 与 user.email");
@@ -58,9 +58,9 @@ export class EnvironmentDetector {
     add("git-worktree", "工作区", snapshot.dirty ? "warning" : "pass", snapshot.dirty ? "存在未提交修改；插件只会处理计划内路径" : "干净");
     add("git-branch", "分支 / upstream", snapshot.branch ? "pass" : "failure", `${snapshot.branch || "detached"} / ${snapshot.upstream || "未配置"} · ahead ${snapshot.ahead} / behind ${snapshot.behind}`, !snapshot.branch, "切换到普通分支");
     add("git-remote", "Git remote", snapshot.remote ? "pass" : "warning", snapshot.remote || "未配置", false, "Push 前需要 upstream remote，或在高级设置中覆盖");
-    const nodeVersion = await this.runner.run({ executable: settings.nodeExecutable, args: ["--version"], cwd: repositoryPath, timeoutMs: 10_000 }).then((r) => r.stdout.trim()).catch(() => "");
+    const nodeVersion = await this.runner.run({ executable: "node", args: ["--version"], cwd: repositoryPath, timeoutMs: 10_000 }).then((r) => r.stdout.trim()).catch(() => "");
     const localHexoCli=await fs.access(path.join(repositoryPath,"node_modules","hexo","bin","hexo")).then(()=>true).catch(()=>false);
-    add("node", "Node", nodeVersion ? "pass" : "failure", nodeVersion || "不可用", !nodeVersion, "在高级设置中指定 Node 路径");
+    add("node", "Node.js", nodeVersion ? "pass" : "failure", nodeVersion || "不可用", !nodeVersion, "将 Node.js 加入系统 PATH");
     add("hexo-cli","本地 Hexo CLI",localHexoCli?"pass":"failure",localHexoCli?"node_modules/hexo/bin/hexo":"未安装到 node_modules",!localHexoCli,"在 Hexo 仓库执行 npm install");
     const hookPath=path.join(repositoryPath,".git","hooks","pre-commit");
     const hookContent=await fs.readFile(hookPath,"utf8").catch(()=>""); const hookPresent=Boolean(hookContent);

@@ -1,4 +1,5 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { constants } from "node:fs";
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { HexoSendError } from "../../domain/errors";
@@ -33,9 +34,10 @@ export class SafeFileSystem {
   async write(relativePath: string, content: string | Uint8Array): Promise<void> {
     const target = await this.absolute(relativePath);
     await fs.mkdir(path.dirname(target), { recursive: true });
-    const temporary = `${target}.hexo-send-${process.pid}-${Date.now()}.tmp`;
+    const temporary = path.join(path.dirname(target), `.${path.basename(target)}.hexo-send-${randomUUID()}.tmp`);
     try {
-      await fs.writeFile(temporary, content);
+      const handle = await fs.open(temporary, "wx");
+      try { await handle.writeFile(content); } finally { await handle.close(); }
       await this.assertTemporaryParent(temporary);
       await this.absolute(relativePath);
       await fs.rename(temporary, target);
@@ -44,9 +46,11 @@ export class SafeFileSystem {
   async copy(sourceAbsolutePath: string, targetRelativePath: string): Promise<void> {
     const target = await this.absolute(targetRelativePath);
     await fs.mkdir(path.dirname(target), { recursive: true });
-    const temporary = `${target}.hexo-send-${process.pid}-${Date.now()}.tmp`;
+    const temporary = path.join(path.dirname(target), `.${path.basename(target)}.hexo-send-${randomUUID()}.tmp`);
     try {
-      await fs.copyFile(sourceAbsolutePath, temporary);
+      await fs.copyFile(sourceAbsolutePath, temporary, constants.COPYFILE_EXCL);
+      const temporaryStat = await fs.lstat(temporary);
+      if (!temporaryStat.isFile() || temporaryStat.isSymbolicLink()) throw new HexoSendError("PATH_OUTSIDE_REPOSITORY", "临时文件类型无效");
       await this.assertTemporaryParent(temporary);
       await this.absolute(targetRelativePath);
       await fs.rename(temporary, target);

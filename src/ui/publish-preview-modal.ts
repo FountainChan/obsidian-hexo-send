@@ -14,8 +14,7 @@ export class PublishPreviewModal extends Modal {
     if (this.articles.length > 1) this.renderBulkCategory();
     const list = this.contentEl.createDiv({ cls: "hexo-send-list" });
     this.articles.forEach((article, index) => this.renderArticle(list, article, index));
-    const commitInput = this.contentEl.createEl("input", { type: "text", placeholder: "留空使用默认 commit message" });
-    commitInput.style.width = "100%";
+    const commitInput = this.contentEl.createEl("input", { type: "text", placeholder: "留空使用默认 commit message", cls: "hexo-send-commit-message" });
     const actions = this.contentEl.createDiv({ cls: "hexo-send-actions" });
     const cancel = actions.createEl("button", { text: "取消" }); cancel.addEventListener("click", () => this.close());
     const confirm = actions.createEl("button", { text: "生成并提交", cls: "mod-cta" });
@@ -52,10 +51,10 @@ export class PublishPreviewModal extends Modal {
     const action = this.selectField(grid, "目标动作");
     for (const [value,label] of [["create","新增"],["update","更新已有文章"],["save-as-new","另存为新文章"],["skip","跳过"]] as const) action.createEl("option", { value, text: label });
     action.value = article.action; action.addEventListener("change", () => { article.action = action.value as ReviewedArticle["action"]; });
-    grid.createEl("span", { text: "当前目标" }); targetCode.current = grid.createEl("code", { text: article.targetRelativePath });
+    grid.createSpan({ text: "当前目标" }); targetCode.current = grid.createEl("code", { text: article.targetRelativePath });
     for (const image of article.images) this.field(grid, `图片 alt（第 ${image.line} 行）`, "input", image.alt, (value) => { image.alt = value; });
     if (article.images.some((image) => image.remote)) {
-      grid.createEl("span", { text: "远程图片失败" }); const fallback = grid.createEl("label"); const checkbox = fallback.createEl("input", { type: "checkbox" }); checkbox.checked = Boolean(article.allowRemoteImageFallback); checkbox.addEventListener("change", () => { article.allowRemoteImageFallback = checkbox.checked; }); fallback.appendText(" 下载失败时保留远程 URL（可能失效）");
+      grid.createSpan({ text: "远程图片失败" }); const fallback = grid.createEl("label"); const checkbox = fallback.createEl("input", { type: "checkbox" }); checkbox.checked = Boolean(article.allowRemoteImageFallback); checkbox.addEventListener("change", () => { article.allowRemoteImageFallback = checkbox.checked; }); fallback.appendText(" 下载失败时保留远程 URL（可能失效）");
     }
     for (const unsupported of article.unsupported) card.createEl("p", { text: `⚠ 第 ${unsupported.line} 行不支持自动转换：${unsupported.type}`, cls: "hexo-send-warning" });
     for (const warning of article.warnings) card.createEl("p", { text: `⚠ ${warning}`, cls: "hexo-send-warning" });

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.4
+
+- 设置页迁移到 Obsidian 1.13 declarative settings API，并支持设置搜索。
+- 接入官方 `eslint-plugin-obsidianmd`，将社区审核规则纳入本地质量门。
+- AI 请求改用 `requestUrl`；远程图片改为固定已验证公网 IP 的流式 HTTP(S) 下载。
+- 固定 SecretStorage ID、重新验证 AI 缓存，并移除配置驱动的可执行文件覆盖和启动时自动检测。
+- 修复静态样式、窗口计时器、异步事件、Zod 废弃 API 和 Electron 类型安全问题。
+
 ## 0.1.3
 
 - 增加完整英文 README，并保留独立的简体中文 README。

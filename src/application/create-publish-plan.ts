@@ -29,8 +29,8 @@ export async function createPublishPlan(articles: readonly ReviewedArticle[], en
     if (article.action === "update") {
       if (!exists) throw new Error(`${targetRelativePath} 不存在，无法更新`);
       const existing = splitFrontmatter(await safeFs.read(targetRelativePath)).frontmatter;
-      if (existing.abbrlink !== undefined && existing.abbrlink !== null) article.metadata.abbrlink = String(existing.abbrlink);
-      if (existing.date) article.metadata.date = String(existing.date);
+      if (typeof existing.abbrlink === "string" || typeof existing.abbrlink === "number") article.metadata.abbrlink = String(existing.abbrlink);
+      if (typeof existing.date === "string" || typeof existing.date === "number") article.metadata.date = String(existing.date);
     }
     selected.push({ ...article, targetRelativePath });
   }

@@ -7,4 +7,3 @@ await fs.mkdir(target,{recursive:true});
 for (const file of ["main.js","manifest.json","styles.css"]) await fs.copyFile(path.resolve(file),path.join(target,file));
 const files = await fs.readdir(target);
 if (files.sort().join(",") !== "main.js,manifest.json,styles.css") throw new Error(`Unexpected package files: ${files.join(", ")}`);
-console.log(`Packaged ${files.length} files in ${target}`);

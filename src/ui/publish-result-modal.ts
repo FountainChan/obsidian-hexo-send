@@ -25,13 +25,13 @@ export class PublishResultModal extends Modal {
     actions.createEl("button", { text: "打开 Hexo 目录" }).addEventListener("click", this.onOpenDirectory);
     actions.createEl("button", { text: "查看详情" }).addEventListener("click", () => { new TextDetailsModal(this.app, "预发布诊断详情", this.details()).open(); });
     actions.createEl("button", { text: "稍后" }).addEventListener("click", () => this.close());
-    if (!committed) actions.createEl("button", { text:"恢复本次改动", cls:"mod-warning" }).addEventListener("click",async()=>{ try { await this.onRestore(); new Notice("已恢复本次改动"); this.close(); } catch(error){ new Notice(error instanceof Error ? error.message : String(error),10000); } });
+    if (!committed) actions.createEl("button", { text:"恢复本次改动", cls:"mod-warning" }).addEventListener("click",()=>{ void (async()=>{ try { await this.onRestore(); new Notice("已恢复本次改动"); this.close(); } catch(error){ new Notice(error instanceof Error ? error.message : String(error),10000); } })(); });
     const successes = this.result.articles.filter((article)=>!article.error); const failures = this.result.articles.filter((article)=>article.error);
-    if (!committed && successes.length && failures.length) actions.createEl("button", { text:`只提交成功项（${successes.length}）`, cls:"mod-cta" }).addEventListener("click",async()=>{ try { this.handingOff=true; await this.onCommitSuccessful(); this.close(); } catch(error){ this.handingOff=false; new Notice(error instanceof Error ? error.message : String(error),10000); } });
+    if (!committed && successes.length && failures.length) actions.createEl("button", { text:`只提交成功项（${successes.length}）`, cls:"mod-cta" }).addEventListener("click",()=>{ void (async()=>{ try { this.handingOff=true; await this.onCommitSuccessful(); this.close(); } catch(error){ this.handingOff=false; new Notice(error instanceof Error ? error.message : String(error),10000); } })(); });
     if (this.result.state === "committed" || this.result.state === "push_failed") {
       const push = actions.createEl("button", { text: this.result.state === "push_failed" ? "重试 Push" : "Push", cls: "mod-cta" });
       push.disabled = !this.result.remote || !this.result.branch || !this.result.commitHash;
-      push.addEventListener("click", async () => { push.disabled = true; try { await this.onPush(); this.result.state = "pushed"; new Notice("远端已接收 commit；未检查部署状态"); this.render(); } catch (error) { this.result.state = "push_failed"; new Notice(error instanceof Error ? error.message : String(error), 8000); this.render(); } });
+      push.addEventListener("click", () => { void (async () => { push.disabled = true; try { await this.onPush(); this.result.state = "pushed"; new Notice("远端已接收 commit；未检查部署状态"); this.render(); } catch (error) { this.result.state = "push_failed"; new Notice(error instanceof Error ? error.message : String(error), 8000); this.render(); } })(); });
     }
   }
   private details(): string { return JSON.stringify({ state: this.result.state, commitHash: this.result.commitHash, branch: this.result.branch, remote: this.result.remote, repositoryPath: this.repositoryPath, articles: this.result.articles, diagnostics: this.result.diagnostics }, null, 2); }

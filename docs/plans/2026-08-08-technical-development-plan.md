@@ -236,7 +236,7 @@ obsidian-hexo-send/
 ### 4.4 图片服务
 
 - 首版识别 Markdown 图片和 Obsidian wiki 图片嵌入；本地附件通过 Vault 解析为真实文件。
-- 远程下载使用超时、最大响应体、重定向上限和 MIME/扩展名校验；代理为可选设置。
+- 远程下载使用固定公网 IP、超时、流式响应体上限、重定向上限和 MIME/扩展名校验。
 - 文件按正文出现顺序稳定编号，保留可信扩展名；同一源资源在同篇文章中去重。
 - 空 alt 进入人工检查项；不得自动生成无依据描述并静默通过。
 - 普通 wikilink、笔记嵌入、Dataview、Canvas、Excalidraw 输出带行号的警告/阻止项。
@@ -410,7 +410,7 @@ flowchart LR
 | Obsidian API/SecretStorage 版本差异 | 无法加载或泄密 | 明确最低 app version、适配器封装、启动能力检测；AC-03/27 |
 | YAML/Obsidian 语法边界导致内容失真 | 博文错误 | AST/位置测试、unsupported matrix、人工预览；AC-11/14 |
 | pre-commit hook 改写或 stage 额外文件 | commit 污染 | commit 前 index 核对、commit 后 tree 核对；异常时绝不 Push；AC-19 |
-| 远程图片过大、伪装 MIME、内网 URL | 资源耗尽/不安全请求 | 超时/大小/redirect/MIME 限制；默认拒绝本机和私网地址，用户代理不改变该规则 |
+| 远程图片过大、伪装 MIME、内网 URL | 资源耗尽/不安全请求 | 固定已验证公网 IP，并设置超时、大小、redirect 与 MIME 限制；每次重定向重新验证 |
 | 批量 AI/下载导致 UI 卡顿 | 体验差 | 并发上限、逐项进度、AbortSignal、主线程不做同步 IO；AC-06/09 |
 | “只提交成功项”复用旧中间结果 | 未经完整验证 | 必须重建计划并重跑两次 generate；AC-20 |
 

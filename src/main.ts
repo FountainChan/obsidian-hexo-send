@@ -8,16 +8,17 @@ import { parseSource } from "./infrastructure/markdown/source-parser";
 import { resolveVaultAssetPath } from "./infrastructure/markdown/vault-path";
 import { EnvironmentDetector } from "./infrastructure/hexo/environment-detector";
 import { GitService } from "./infrastructure/git/git-service";
-import { OpenAiCompatibleProvider, type AiMetadata } from "./infrastructure/ai/openai-compatible-provider";
+import { AiMetadataSchema, OpenAiCompatibleProvider, type AiMetadata } from "./infrastructure/ai/openai-compatible-provider";
 import { NodeProcessRunner } from "./infrastructure/process/node-process-runner";
 import { TempJobJournal } from "./infrastructure/files/temp-job-journal";
-import { DEFAULT_SETTINGS, parseSettings, type HexoSendSettings } from "./settings";
+import { AI_SECRET_ID, DEFAULT_SETTINGS, parseSettings, type HexoSendSettings } from "./settings";
 import { HexoSendSettingTab } from "./obsidian/settings-tab";
 import { PublishPreviewModal } from "./ui/publish-preview-modal";
 import { PublishProgressModal } from "./ui/publish-progress-modal";
 import { PublishResultModal } from "./ui/publish-result-modal";
 import { RecoveryModal } from "./ui/recovery-modal";
 import { HexoSendError } from "./domain/errors";
+import { openSystemPath } from "./infrastructure/electron/electron-bridge";
 
 export default class HexoSendPlugin extends Plugin {
   settings: HexoSendSettings = DEFAULT_SETTINGS;
@@ -34,7 +35,6 @@ export default class HexoSendPlugin extends Plugin {
     this.registerEvent(this.app.workspace.on("file-menu", (menu, file) => this.addFileMenu(menu, [file])));
     this.registerEvent(this.app.workspace.on("files-menu", (menu, files) => this.addFileMenu(menu, files)));
     this.addCommand({ id: "publish-current-note", name: "预发布当前笔记到 Hexo", checkCallback: (checking) => { const file = this.app.workspace.getActiveFile(); if (!file || file.extension.toLowerCase() !== "md") return false; if (!checking) void this.startPublish([file]); return true; } });
-    if (this.settings.repositoryPath) void this.detectEnvironment(false);
     const incomplete = await TempJobJournal.findIncomplete(); if (incomplete.length) new RecoveryModal(this.app,incomplete,(directory)=>{void openDirectory(directory);},(directory)=>this.restoreJob(directory)).open();
   }
   onunload(): void { this.coordinator.cancel(); }
@@ -74,13 +74,14 @@ export default class HexoSendPlugin extends Plugin {
   private isExcluded(vaultPath: string): boolean { return this.settings.excludePatterns.some((pattern) => globRegex(pattern).test(vaultPath)); }
   private async enrichSources(sources: SourceArticle[], environment: HexoEnvironment, signal:AbortSignal): Promise<Map<string,string[]>> {
     const warnings = new Map<string,string[]>(); if (!this.settings.aiEnabled) return warnings;
-    const key = this.app.secretStorage.getSecret(this.settings.aiSecretId); if (!key) { for (const source of sources) warnings.set(source.sourcePath,["AI 已启用但未设置 API key，请人工补齐元数据"]); return warnings; }
+    const key = this.app.secretStorage.getSecret(AI_SECRET_ID); if (!key) { for (const source of sources) warnings.set(source.sourcePath,["AI 已启用但未设置 API key，请人工补齐元数据"]); return warnings; }
     const provider = new OpenAiCompatibleProvider();
     await mapLimit(sources.filter((source) => validateMetadata(source.metadata).length > 0), 2, async (source) => {
       if(signal.aborted)throw new HexoSendError("CANCELLED","元数据分析已取消");
       const cacheKey = OpenAiCompatibleProvider.cacheKey(source.body, environment.categories, this.settings.aiModel);
       try {
-        const cached = this.settings.aiCache[cacheKey]?.value as AiMetadata | undefined;
+        const cachedEntry=this.settings.aiCache[cacheKey]; const cachedResult=AiMetadataSchema.safeParse(cachedEntry?.value); const cached=cachedResult.success?cachedResult.data:undefined;
+        if(cachedEntry&&!cachedResult.success)delete this.settings.aiCache[cacheKey];
         const ai = cached ?? await provider.enrich({ endpoint: this.settings.aiEndpoint, model: this.settings.aiModel, apiKey: key, body: source.body, categories: environment.categories, tags: environment.tags,signal });
         if (!cached) this.settings.aiCache[cacheKey] = { value: ai, createdAt: new Date().toISOString() };
         applyAi(source, ai, environment.tags); if (ai.confidence === "low") warnings.set(source.sourcePath,["AI 分类置信度较低，请人工确认"]);
@@ -90,7 +91,7 @@ export default class HexoSendPlugin extends Plugin {
   }
   private async executeReviewed(articles: ReviewedArticle[], environment: HexoEnvironment, message: string): Promise<void> {
     try {
-      const git = new GitService(this.runner, this.settings.gitExecutable); const snapshot = await git.assertSafeForWrite(environment.repositoryPath);
+      const git = new GitService(this.runner); const snapshot = await git.assertSafeForWrite(environment.repositoryPath);
       const plan = await createPublishPlan(articles, environment, snapshot.head, message);
       const adapter=this.app.vault.adapter;
       if(adapter instanceof FileSystemAdapter){
@@ -100,7 +101,7 @@ export default class HexoSendPlugin extends Plugin {
       const result = await this.coordinator.execute(plan, environment, this.settings, (reference) => this.resolveLocalAsset(reference, articles), (update) => progress.update(update));
       progress.close();
       new PublishResultModal(this.app, result, environment.repositoryPath,
-        async () => { if (!result.commitHash || !result.remote || !result.branch) throw new Error("缺少 Push 上下文"); await new GitService(this.runner, this.settings.gitExecutable).pushConfirmed(environment.repositoryPath, result.commitHash, result.remote, result.branch); },
+        async () => { if (!result.commitHash || !result.remote || !result.branch) throw new Error("缺少 Push 上下文"); await new GitService(this.runner).pushConfirmed(environment.repositoryPath, result.commitHash, result.remote, result.branch); },
         () => { void openDirectory(environment.repositoryPath); },
         async () => { await this.restoreJob(TempJobJournal.pathFor(result.jobId)); },
         async () => { const succeeded = new Set(result.articles.filter((item)=>!item.error).map((item)=>item.sourcePath)); await this.restoreJob(TempJobJournal.pathFor(result.jobId)); const retry = articles.map((item)=>({...item,selected:succeeded.has(item.sourcePath)})); await this.executeReviewed(retry,environment,message); },
@@ -118,7 +119,7 @@ export default class HexoSendPlugin extends Plugin {
   private async restoreJob(directory: string): Promise<void> {
     const info = await TempJobJournal.infoAt(directory);
     if (!this.settings.repositoryPath || path.resolve(info.repositoryPath).toLowerCase() !== path.resolve(this.settings.repositoryPath).toLowerCase()) throw new Error("恢复记录不属于当前配置的 Hexo 仓库");
-    await new GitService(this.runner,this.settings.gitExecutable).unstageExact(info.repositoryPath,info.paths); await TempJobJournal.restoreAt(directory);
+    await new GitService(this.runner).unstageExact(info.repositoryPath,info.paths); await TempJobJournal.restoreAt(directory);
   }
 }
 
@@ -138,8 +139,6 @@ async function mapLimit<T,R>(items: readonly T[], concurrency: number, worker: (
 }
 async function openDirectory(directory: string): Promise<void> {
   try {
-    const electron = (window as typeof window & { require?: (id: string) => { shell?: { openPath(path: string): Promise<string> } } }).require?.("electron");
-    if (!electron?.shell) throw new Error("Electron shell 不可用");
-    const error = await electron.shell.openPath(directory); if (error) throw new Error(error);
+    await openSystemPath(directory);
   } catch (error) { new Notice(`无法打开目录：${error instanceof Error ? error.message : String(error)}`); }
 }

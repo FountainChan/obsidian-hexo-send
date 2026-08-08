@@ -7,22 +7,15 @@ import { HexoSendError } from "../../domain/errors";
 import { assertSafeRelativePath } from "../../domain/target-path";
 import { SafeFileSystem } from "./safe-file-system";
 
-interface JournalRecord {
-  id: string;
-  repositoryPath: string;
-  createdAt: string;
-  completed: boolean;
-  files: Record<string, { existed: boolean; backup?: string; baselineHash: string | null; writtenHash: string | null }>;
-}
-
 const BackupPathSchema = z.string().regex(/^backups\/[a-f0-9]{64}\.bin$/);
 const JournalRecordSchema = z.object({
-  id: z.string().uuid(),
+  id: z.uuid(),
   repositoryPath: z.string().min(1),
-  createdAt: z.string().datetime(),
+  createdAt: z.iso.datetime(),
   completed: z.boolean(),
   files: z.record(z.string(), z.object({ existed: z.boolean(), backup: BackupPathSchema.optional(), baselineHash: z.string().regex(/^[a-f0-9]{64}$/).nullable(), writtenHash: z.string().regex(/^[a-f0-9]{64}$/).nullable() }).strict()),
 }).strict();
+type JournalRecord = z.infer<typeof JournalRecordSchema>;
 
 export class TempJobJournal {
   readonly id: string;
@@ -95,7 +88,7 @@ async function loadRecord(directory: string): Promise<JournalRecord> {
   const safeDirectory = safeJournalDirectory(directory);
   const directoryStat = await fs.lstat(safeDirectory);
   if (!directoryStat.isDirectory() || directoryStat.isSymbolicLink()) throw new HexoSendError("RECOVERY_CONFLICT", "恢复目录类型无效");
-  const record = JournalRecordSchema.parse(JSON.parse(await fs.readFile(path.join(safeDirectory, "journal.json"), "utf8"))) as JournalRecord;
+  const record = JournalRecordSchema.parse(JSON.parse(await fs.readFile(path.join(safeDirectory, "journal.json"), "utf8")));
   await validateRecord(safeDirectory, record);
   return record;
 }
