@@ -1,0 +1,9 @@
+{
+  "id": "hexo-send",
+  "name": "Hexo Send",
+  "version": "0.1.1",
+  "minAppVersion": "1.11.4",
+  "description": "预发布 Obsidian 笔记到本地 Hexo 仓库，创建本地 commit，并在确认后 Push。",
+  "author": "FountainChan",
+  "isDesktopOnly": true
+}

@@ -1,0 +1,15 @@
+.hexo-send-modal { width: min(1100px, 92vw); }
+.hexo-send-grid { display: grid; grid-template-columns: minmax(140px, 1fr) minmax(260px, 2fr); gap: 0.65rem 1rem; align-items: center; }
+.hexo-send-list { max-height: 55vh; overflow: auto; margin: 1rem 0; }
+.hexo-send-card { border: 1px solid var(--background-modifier-border); border-radius: 8px; padding: 0.8rem; margin-bottom: 0.75rem; }
+.hexo-send-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.5rem; margin-top: 1rem; }
+.hexo-send-status-pass { color: var(--color-green); }
+.hexo-send-status-warning { color: var(--color-orange); }
+.hexo-send-status-failure { color: var(--color-red); }
+.hexo-send-status-cell { width: 1.75rem; min-width: 1.75rem; text-align: center; white-space: nowrap; }
+.hexo-send-status-cell svg { width: 1.1rem; height: 1.1rem; vertical-align: middle; }
+.hexo-send-warning { color: var(--text-warning); }
+.hexo-send-muted { color: var(--text-muted); }
+.hexo-send-progress { width: 100%; }
+.hexo-send-field textarea { width: 100%; min-height: 5rem; }
+.hexo-send-field input, .hexo-send-field select { width: 100%; }

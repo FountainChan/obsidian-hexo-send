@@ -1,0 +1,16 @@
+import { describe, expect, it } from "vitest";
+import { NodeProcessRunner } from "../../src/infrastructure/process/node-process-runner";
+
+describe("NodeProcessRunner", () => {
+  it("passes argv without a shell", async () => {
+    const value = "literal;&$()"; const result = await new NodeProcessRunner().run({ executable: process.execPath, args: ["-e","process.stdout.write(process.argv[1])",value], cwd: process.cwd() });
+    expect(result.stdout).toBe(value); expect(result.args.at(-1)).toBe(value);
+  });
+  it("redacts secrets", async () => {
+    const result = await new NodeProcessRunner().run({ executable: process.execPath, args: ["-e","process.stdout.write(process.argv[1])","top-secret"], cwd: process.cwd(), secrets:["top-secret"] });
+    expect(result.stdout).toBe("[REDACTED]"); expect(result.args).not.toContain("top-secret");
+  });
+  it("supports timeout", async () => {
+    await expect(new NodeProcessRunner().run({ executable: process.execPath, args: ["-e","setTimeout(()=>{},5000)"], cwd: process.cwd(), timeoutMs:50 })).rejects.toMatchObject({ code:"PROCESS_TIMEOUT" });
+  });
+});
