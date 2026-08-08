@@ -24,7 +24,7 @@ export class PublishCoordinator {
     const controller = new AbortController(); this.active = controller;
     const state = new PublishStateMachine("awaiting_review"); const diagnostics: DiagnosticEvent[] = []; const results: ArticleResult[] = [];
     const emit = (message: string, current = 0, total = plan.articles.length) => progress({ state: state.state, message, current, total });
-    const git = new GitService(this.runner, settings.gitExecutable); const hexo = new HexoService(this.runner, settings.npxExecutable,settings.nodeExecutable);
+    const git = new GitService(this.runner, settings.gitExecutable); const hexo = new HexoService(this.runner, settings.nodeExecutable);
     const safeFs = new SafeFileSystem(plan.repositoryPath); const journal = new TempJobJournal(plan.repositoryPath, plan.id); const assetService = new AssetService(this.runner);
     let createdCommitHash: string | undefined;
     try {

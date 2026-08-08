@@ -1,5 +1,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import os from "node:os";
+import { randomUUID } from "node:crypto";
 import { promises as dns } from "node:dns";
 import { HexoSendError } from "../../domain/errors";
 import type { ImageReference } from "../../domain/publish-types";
@@ -28,7 +30,7 @@ export class AssetService {
         try {
           const ext = extensionFor(image.target); const relative = path.posix.join(options.imagesDir, options.abbrlink, `${String(number).padStart(2,"0")}${ext}`);
           await options.beforeWrite?.(relative);
-          if (image.remote) await this.download(image.target, await safeFs.absolute(relative), options.repositoryPath, options.proxy, options.signal);
+          if (image.remote) await this.download(image.target, safeFs, relative, options.repositoryPath, options.proxy, options.signal);
           else { const source = localSources.get(image.target); if (!source) throw new Error("找不到本地附件"); await safeFs.copy(source, relative); }
           publicPath = `/${relative.replace(/^source\//, "")}`; seen.set(image.target, publicPath); paths.push(relative); if (!firstImage) firstImage = publicPath;
         } catch (error) {
@@ -40,11 +42,30 @@ export class AssetService {
     }
     return { body, paths, warnings, firstImage };
   }
-  private async download(url: string, target: string, cwd: string, proxy?: string, signal?: AbortSignal): Promise<void> {
-    await assertPublicHttpUrl(url); await fs.mkdir(path.dirname(target), { recursive: true });
+  private async download(url: string, safeFs: SafeFileSystem, targetRelativePath: string, cwd: string, proxy?: string, signal?: AbortSignal): Promise<void> {
+    await assertPublicHttpUrl(url);
     if (proxy) {
-      await this.runner.run({ executable: "curl.exe", args: ["--fail","--location","--silent","--show-error","--max-time","30","--max-filesize","20971520","--proxy",proxy,"--output",target,url], cwd, timeoutMs: 45_000, signal });
-      const stat = await fs.stat(target); if (stat.size < 32 || stat.size > 20*1024*1024) throw new Error("图片大小无效"); return;
+      const temporary = path.join(os.tmpdir(), `hexo-send-download-${randomUUID()}.tmp`);
+      try {
+        let current = url;
+        for (let redirects = 0; redirects <= 5; redirects += 1) {
+          await assertPublicHttpUrl(current);
+          const result = await this.runner.run({ executable: "curl.exe", args: ["--fail","--silent","--show-error","--max-time","30","--max-redirs","0","--max-filesize","20971520","--proxy",proxy,"--output",temporary,"--write-out","%{http_code}\t%{redirect_url}\t%{content_type}",current], cwd, timeoutMs: 45_000, signal });
+          const [statusText = "0", redirectUrl = "", contentType = ""] = result.stdout.trim().split("\t");
+          const status = Number(statusText);
+          if (status >= 300 && status < 400) {
+            if (!redirectUrl || redirects === 5) throw new Error("图片重定向无效或次数超过 5 次");
+            current = new URL(redirectUrl, current).toString();
+            continue;
+          }
+          if (status < 200 || status >= 300) throw new Error(`HTTP ${status || "未知"}`);
+          if (!contentType.toLowerCase().startsWith("image/")) throw new Error(`响应不是图片：${contentType || "未知类型"}`);
+          const stat = await fs.stat(temporary); if (stat.size < 32 || stat.size > 20*1024*1024) throw new Error("图片大小无效");
+          await safeFs.copy(temporary, targetRelativePath);
+          return;
+        }
+      } finally { await fs.rm(temporary, { force: true }).catch(() => undefined); }
+      throw new Error("图片重定向次数超过 5 次");
     }
     const timeout = AbortSignal.timeout(30_000); const combined = signal ? AbortSignal.any([signal, timeout]) : timeout;
     let current=url; let response:Response|undefined;
@@ -58,7 +79,7 @@ export class AssetService {
     const length = Number(response.headers.get("content-length") || 0); if (length > 20*1024*1024) throw new Error("图片超过 20MB");
     const type = response.headers.get("content-type") || ""; if (!type.startsWith("image/")) throw new Error(`响应不是图片：${type || "未知类型"}`);
     const bytes = new Uint8Array(await response.arrayBuffer()); if (bytes.length < 32 || bytes.length > 20*1024*1024) throw new Error("图片大小无效");
-    await fs.writeFile(target, bytes);
+    await safeFs.write(targetRelativePath, bytes);
   }
 }
 function extensionFor(target: string): string { const ext = path.extname(new URL(target, "file:///").pathname).toLowerCase(); return /^\.(jpe?g|png|gif|webp|svg|avif)$/.test(ext) ? (ext === ".jpeg" ? ".jpg" : ext) : ".jpg"; }

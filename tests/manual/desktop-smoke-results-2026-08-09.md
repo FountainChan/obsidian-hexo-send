@@ -12,7 +12,7 @@
 
 - 插件处于 enabled，实例、命令 `hexo-send:publish-current-note` 和设置页均注册成功。
 - 设置页回显站点、author、URL、目录、分类/category_map、Hexo/abbrlink、Git、Node 和 pre-commit 检查。
-- 发现 Obsidian GUI 无法执行 npx 后，改为优先通过 Node 直接调用仓库内 `node_modules/hexo/bin/hexo`；修复后阻塞项为 0。
+- 发现 Obsidian GUI 无法执行 npx 后，改为通过 Node 直接调用仓库内 `node_modules/hexo/bin/hexo`；修复后阻塞项为 0。
 - 文件树目录右键显示“批量预发布到 Hexo…”。
 - 当前 Markdown 命令打开预览，显示动态分类、元数据、目标路径、冲突动作、图片 alt 和“生成并提交”。
 - 取消预览后 modal 关闭、workflow lock 释放；正式 Hexo HEAD/status 和 Vault 原有内容状态未改变。

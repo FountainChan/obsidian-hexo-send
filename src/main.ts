@@ -116,7 +116,9 @@ export default class HexoSendPlugin extends Plugin {
     const adapter = this.app.vault.adapter; return adapter instanceof FileSystemAdapter ? adapter.getFullPath(file.path) : null;
   }
   private async restoreJob(directory: string): Promise<void> {
-    const info = await TempJobJournal.infoAt(directory); await new GitService(this.runner,this.settings.gitExecutable).unstageExact(info.repositoryPath,info.paths); await TempJobJournal.restoreAt(directory);
+    const info = await TempJobJournal.infoAt(directory);
+    if (!this.settings.repositoryPath || path.resolve(info.repositoryPath).toLowerCase() !== path.resolve(this.settings.repositoryPath).toLowerCase()) throw new Error("恢复记录不属于当前配置的 Hexo 仓库");
+    await new GitService(this.runner,this.settings.gitExecutable).unstageExact(info.repositoryPath,info.paths); await TempJobJournal.restoreAt(directory);
   }
 }
 

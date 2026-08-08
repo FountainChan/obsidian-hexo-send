@@ -13,3 +13,4 @@
 .hexo-send-progress { width: 100%; }
 .hexo-send-field textarea { width: 100%; min-height: 5rem; }
 .hexo-send-field input, .hexo-send-field select { width: 100%; }
+.hexo-send-details-text { width: 100%; min-height: 20rem; resize: vertical; font-family: var(--font-monospace); }

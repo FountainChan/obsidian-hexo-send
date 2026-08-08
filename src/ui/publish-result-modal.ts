@@ -1,5 +1,6 @@
 import { Modal, Notice } from "obsidian";
 import type { PublishResult } from "../domain/publish-types";
+import { TextDetailsModal } from "./text-details-modal";
 
 export class PublishResultModal extends Modal {
   private handingOff = false;
@@ -22,7 +23,7 @@ export class PublishResultModal extends Modal {
     for (const diagnostic of this.result.diagnostics) this.contentEl.createEl("pre", { text: `[${diagnostic.code}] ${diagnostic.message}`, cls: `hexo-send-status-${diagnostic.level}` });
     const actions = this.contentEl.createDiv({ cls: "hexo-send-actions" });
     actions.createEl("button", { text: "打开 Hexo 目录" }).addEventListener("click", this.onOpenDirectory);
-    actions.createEl("button", { text: "复制详情" }).addEventListener("click", async () => { await navigator.clipboard.writeText(this.details()); new Notice("诊断详情已复制"); });
+    actions.createEl("button", { text: "查看详情" }).addEventListener("click", () => { new TextDetailsModal(this.app, "预发布诊断详情", this.details()).open(); });
     actions.createEl("button", { text: "稍后" }).addEventListener("click", () => this.close());
     if (!committed) actions.createEl("button", { text:"恢复本次改动", cls:"mod-warning" }).addEventListener("click",async()=>{ try { await this.onRestore(); new Notice("已恢复本次改动"); this.close(); } catch(error){ new Notice(error instanceof Error ? error.message : String(error),10000); } });
     const successes = this.result.articles.filter((article)=>!article.error); const failures = this.result.articles.filter((article)=>article.error);

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.3
+
+- 增加完整英文 README，并保留独立的简体中文 README。
+- Release 只上传社区插件市场支持的 `main.js`、`manifest.json` 和 `styles.css`。
+- 移除直接 Clipboard API 访问，诊断详情改为只读文本窗口。
+- 移除 npx 回退，只运行仓库本地 Hexo CLI。
+- 加固仓库路径、符号链接、恢复记录和代理图片重定向的安全边界。
+
 ## 0.1.2
 
 - 调整社区插件市场描述，移除目录上下文中重复的 “Obsidian” 字样。

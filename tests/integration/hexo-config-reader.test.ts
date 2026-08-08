@@ -14,4 +14,10 @@ describe("readHexoConfig", () => {
     await fs.writeFile(path.join(root,"source","_posts","flat.md"),"---\ncategories: [技术, 生活]\ntags: [Obsidian]\n---\nbody\n");
     const result = await readHexoConfig(root); expect(result.hexoVersion).toBe("^8.1.0"); expect(result.abbrlinkInstalled).toBe(true); expect(result.categories).toEqual(expect.arrayContaining([["技术"],["生活"],["SEO教程","入门教程"]])); expect(result.tags).toEqual(["Git","Hexo","Obsidian"]);
   });
+  it("rejects source directories outside the repository", async () => {
+    root = await fs.mkdtemp(path.join(os.tmpdir(),"hexo-send-config-"));
+    await fs.writeFile(path.join(root,"_config.yml"),"source_dir: ../outside\n");
+    await fs.writeFile(path.join(root,"package.json"),"{}");
+    await expect(readHexoConfig(root)).rejects.toMatchObject({code:"PATH_OUTSIDE_REPOSITORY"});
+  });
 });

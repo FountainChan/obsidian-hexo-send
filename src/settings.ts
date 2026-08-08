@@ -11,7 +11,6 @@ export const SettingsSchema = z.object({
   imageProxy: z.string().default(""),
   gitExecutable: z.string().default("git"),
   nodeExecutable: z.string().default("node"),
-  npxExecutable: z.string().default("npx"),
   remoteOverride: z.string().default(""),
   branchOverride: z.string().default(""),
   postsDirOverride: z.string().default(""),

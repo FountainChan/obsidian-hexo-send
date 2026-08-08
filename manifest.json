@@ -1,7 +1,7 @@
 {
   "id": "hexo-send",
   "name": "Hexo Send",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "minAppVersion": "1.11.4",
   "description": "Prepare notes for Hexo, create a local commit, and push only after confirmation.",
   "author": "FountainChan",

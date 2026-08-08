@@ -18,4 +18,12 @@ describe("TempJobJournal",()=>{
     const journal=new TempJobJournal(repository); directory=journal.directory; await journal.begin(["old.md"]); await fs.writeFile(path.join(repository,"old.md"),"plugin"); await journal.markWritten("old.md"); await fs.writeFile(path.join(repository,"old.md"),"user edit");
     await expect(TempJobJournal.restoreAt(directory)).rejects.toMatchObject({code:"RECOVERY_CONFLICT"});
   });
+  it("rejects a tampered recovery path",async()=>{
+    repository=await fs.mkdtemp(path.join(os.tmpdir(),"hexo-send-journal-repo-"));
+    const journal=new TempJobJournal(repository); directory=journal.directory; await journal.begin(["new.md"]);
+    const journalPath=path.join(directory,"journal.json"); const record=JSON.parse(await fs.readFile(journalPath,"utf8")) as {files:Record<string,unknown>};
+    record.files["../outside.md"]=record.files["new.md"] as unknown; delete record.files["new.md"];
+    await fs.writeFile(journalPath,JSON.stringify(record));
+    await expect(TempJobJournal.infoAt(directory)).rejects.toThrow();
+  });
 });

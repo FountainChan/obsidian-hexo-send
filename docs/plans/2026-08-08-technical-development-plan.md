@@ -62,7 +62,7 @@ Obsidian 菜单 / Modal / 设置页
 - Vitest：领域和应用层单元测试；临时目录中的真实 Git 集成测试。
 - ESLint + Prettier + `tsc --noEmit`：静态质量门。
 
-不引入 `simple-git` 或 shell 拼接库。Git/Node/npx 的退出码、stdout、stderr、超时、取消和参数必须由统一 `ProcessRunner` 控制。
+不引入 `simple-git` 或 shell 拼接库。Git、Node 和仓库本地 Hexo CLI 的退出码、stdout、stderr、超时、取消和参数必须由统一 `ProcessRunner` 控制。
 
 ### 2.3 核心数据模型
 
@@ -291,7 +291,7 @@ Push 使用检测出的 remote 和显式 refspec，不执行 force，不自动�
 |---|---|---|---|---|
 | T15 | Git 安全检查、精确 stage、index/commit tree 核对和单 commit | T03、T12、T14 | Git service | staged 污染与 Git 中间态阻止；commit 仅含 allowlist |
 | T16 | 完整任务编排、互斥、进度、取消和“只提交成功项”重规划 | T11、T14、T15 | coordinator、execute use case | 单篇/批量状态轨迹和失败分支集成测试通过 |
-| T17 | 结果页、独立 Push 确认、重试、复制详情和打开目录 | T06、T15、T16 | result modal、push use case | commit 后零自动网络写；HEAD 漂移时 Push 被拒绝 |
+| T17 | 结果页、独立 Push 确认、重试、查看详情和打开目录 | T06、T15、T16 | result modal、push use case | commit 后零自动网络写；HEAD 漂移时 Push 被拒绝 |
 
 ### M5：质量与 Beta
 
@@ -339,8 +339,8 @@ flowchart LR
 
 1. **AC-01 [A+M]** Given 仅设置有效 Hexo 仓库路径，When 点击重新检测，Then 显示 site、author、url、source_dir、普通/SEO/图片目录、category_map、Hexo/abbrlink、Git branch/remote/status 与 hook 状态，且检测前后 `git status --porcelain=v1` 完全一致。
 2. **AC-02 [A]** Given 缺失 `_config.yml`、package、Git 或 hexo-abbrlink 的各独立 fixture，When 检测，Then 每项返回稳定的 failure/warning code 和一条修复建议，必要 failure 阻止创建计划。
-3. **AC-03 [A]** Given AI key 已保存，When 检查插件 `data.json`、复制诊断、普通日志和异常日志，Then 均找不到 key 原文及 Authorization 值。
-4. **AC-04 [M]** Given GUI 环境找不到默认 Git/Node/npx，When 填写高级覆盖路径并重检，Then 使用覆盖项通过；自动检测正常时高级项默认折叠。
+3. **AC-03 [A]** Given AI key 已保存，When 检查插件 `data.json`、诊断详情、普通日志和异常日志，Then 均找不到 key 原文及 Authorization 值。
+4. **AC-04 [M]** Given GUI 环境找不到默认 Git/Node，When 填写高级覆盖路径并重检，Then 使用覆盖项通过；若仓库本地 Hexo CLI 缺失则阻止预发布。
 
 ### 7.2 入口、扫描与预览
 

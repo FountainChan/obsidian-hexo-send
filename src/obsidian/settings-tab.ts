@@ -1,5 +1,6 @@
 import { Notice, PluginSettingTab, Setting, setIcon } from "obsidian";
 import type HexoSendPlugin from "../main";
+import { TextDetailsModal } from "../ui/text-details-modal";
 
 export class HexoSendSettingTab extends PluginSettingTab {
   constructor(app: import("obsidian").App, private readonly plugin: HexoSendPlugin) { super(app, plugin); }
@@ -12,7 +13,7 @@ export class HexoSendSettingTab extends PluginSettingTab {
       .addButton((button) => button.setButtonText("选择…").onClick(async () => { const selected = await chooseFolder(); if (selected) { this.plugin.settings.repositoryPath = selected; await this.plugin.saveSettings(); this.display(); } }));
     new Setting(containerEl).setName("环境检测").setDesc("读取 Hexo、Node 与 Git 配置")
       .addButton((button) => button.setCta().setButtonText("重新检测").onClick(async () => { button.setDisabled(true); await this.plugin.detectEnvironment(true); this.display(); }))
-      .addButton((button) => button.setButtonText("复制诊断结果").setDisabled(!this.plugin.detectionItems.length).onClick(async () => { const value=this.plugin.detectionItems.map((item)=>`[${item.status.toUpperCase()}] ${item.label}: ${item.value}${item.advice?` — ${item.advice}`:""}`).join("\n"); await navigator.clipboard.writeText(value); new Notice("诊断结果已复制"); }));
+      .addButton((button) => button.setButtonText("查看诊断结果").setDisabled(!this.plugin.detectionItems.length).onClick(() => { const value=this.plugin.detectionItems.map((item)=>`[${item.status.toUpperCase()}] ${item.label}: ${item.value}${item.advice?` — ${item.advice}`:""}`).join("\n"); new TextDetailsModal(this.app, "环境诊断结果", value).open(); }));
     if (this.plugin.detectionError) containerEl.createEl("p", { text: this.plugin.detectionError, cls: "hexo-send-status-failure" });
     const detectionItems = this.plugin.environment?.items ?? this.plugin.detectionItems;
     if (detectionItems.length) {
@@ -33,11 +34,11 @@ export class HexoSendSettingTab extends PluginSettingTab {
     new Setting(containerEl).setName("图片下载代理").setDesc("可选，例如 http://127.0.0.1:7890")
       .addText((text) => text.setValue(this.plugin.settings.imageProxy).onChange(async (value) => { this.plugin.settings.imageProxy = value.trim(); await this.plugin.saveSettings(); }));
     const details = containerEl.createEl("details"); details.createEl("summary", { text: "高级覆盖（仅在自动检测失败时使用）" });
-    this.advancedText(details, "Git 可执行文件", "gitExecutable"); this.advancedText(details, "Node 可执行文件", "nodeExecutable"); this.advancedText(details, "npx 可执行文件", "npxExecutable");
+    this.advancedText(details, "Git 可执行文件", "gitExecutable"); this.advancedText(details, "Node 可执行文件", "nodeExecutable");
     this.advancedText(details, "Git remote", "remoteOverride"); this.advancedText(details, "Git branch", "branchOverride");
     this.advancedText(details, "文章目录", "postsDirOverride"); this.advancedText(details, "SEO 文章目录", "seoPostsDirOverride"); this.advancedText(details, "图片目录", "imagesDirOverride");
   }
-  private advancedText(parent: HTMLElement, label: string, key: keyof Pick<import("../settings").HexoSendSettings,"gitExecutable"|"nodeExecutable"|"npxExecutable"|"remoteOverride"|"branchOverride"|"postsDirOverride"|"seoPostsDirOverride"|"imagesDirOverride">): void {
+  private advancedText(parent: HTMLElement, label: string, key: keyof Pick<import("../settings").HexoSendSettings,"gitExecutable"|"nodeExecutable"|"remoteOverride"|"branchOverride"|"postsDirOverride"|"seoPostsDirOverride"|"imagesDirOverride">): void {
     new Setting(parent).setName(label).addText((text) => text.setValue(this.plugin.settings[key]).onChange(async (value) => { this.plugin.settings[key] = value.trim(); await this.plugin.saveSettings(); }));
   }
 }

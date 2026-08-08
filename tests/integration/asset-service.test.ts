@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { AssetService } from "../../src/infrastructure/assets/asset-service";
 import { NodeProcessRunner } from "../../src/infrastructure/process/node-process-runner";
+import type { ProcessRequest, ProcessResult, ProcessRunner } from "../../src/ports/process-runner";
 
 describe("AssetService",()=>{
   let root=""; afterEach(async()=>{if(root)await fs.rm(root,{recursive:true,force:true});});
@@ -24,4 +25,17 @@ describe("AssetService",()=>{
     await expect(service.process({repositoryPath:root,imagesDir:"source/images",abbrlink:"1",body:images.map(item=>item.raw).join("\n"),images,resolveLocal:async(image)=>image.target==="one.jpg"?source:null})).rejects.toMatchObject({code:"ASSET_FAILED"});
     await expect(fs.access(path.join(root,"source","images","1","01.jpg"))).rejects.toThrow();
   });
+  it("revalidates every proxy redirect and blocks private destinations",async()=>{
+    root=await fs.mkdtemp(path.join(os.tmpdir(),"hexo-send-assets-")); const runner=new RedirectRunner(); const target="https://93.184.216.34/a.jpg";
+    await expect(new AssetService(runner).process({repositoryPath:root,imagesDir:"source/images",abbrlink:"1",body:`![x](${target})`,images:[{raw:`![x](${target})`,target,alt:"x",line:1,kind:"markdown",remote:true}],resolveLocal:async()=>null,proxy:"http://127.0.0.1:7890"})).rejects.toMatchObject({code:"ASSET_FAILED"});
+    expect(runner.requests).toHaveLength(1);
+  });
 });
+
+class RedirectRunner implements ProcessRunner {
+  requests: ProcessRequest[] = [];
+  async run(request: ProcessRequest): Promise<ProcessResult> {
+    this.requests.push(request);
+    return { executable:request.executable,args:request.args,cwd:request.cwd,exitCode:0,stdout:"302\thttp://127.0.0.1/private.jpg\ttext/html",stderr:"",durationMs:1 };
+  }
+}

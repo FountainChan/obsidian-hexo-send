@@ -5,6 +5,7 @@ import type { HexoSendSettings } from "../../settings";
 import { GitService } from "../git/git-service";
 import { readHexoConfig } from "./hexo-config-reader";
 import type { ProcessRunner } from "../../ports/process-runner";
+import { SafeFileSystem } from "../files/safe-file-system";
 
 export class EnvironmentDetector {
   constructor(private readonly runner: ProcessRunner) {}
@@ -39,9 +40,14 @@ export class EnvironmentDetector {
     add("category-map", "category_map", Object.keys(config.categoryMap).length ? "pass" : "warning", Object.entries(config.categoryMap).map(([name,slug])=>`${name} → ${slug}`).join("、") || "未配置");
     add("hexo-version", "Hexo 版本", config.hexoVersion ? "pass" : "failure", config.hexoVersion || "未安装", !config.hexoVersion, "在仓库中安装 Hexo");
     add("abbrlink", "hexo-abbrlink", config.abbrlinkInstalled ? "pass" : "failure", config.abbrlinkInstalled ? JSON.stringify(config.abbrlinkConfig) || "已安装" : "未安装", !config.abbrlinkInstalled, "安装并配置 hexo-abbrlink");
+    const safeFs = new SafeFileSystem(repositoryPath);
     for (const [key, label, value] of [["posts-dir","文章目录",config.postsDir],["seo-dir","SEO 文章目录",config.seoPostsDir],["images-dir","图片目录",config.imagesDir]] as const) {
-      const exists = await fs.access(path.join(repositoryPath, ...value.split("/"))).then(() => true).catch(() => false);
-      add(key, label, exists ? "pass" : "warning", value, false, exists ? undefined : "目录将在首次预发布时创建");
+      try {
+        const exists = await safeFs.exists(value);
+        add(key, label, exists ? "pass" : "warning", value, false, exists ? undefined : "目录将在首次预发布时创建");
+      } catch (error) {
+        add(key, label, "failure", error instanceof Error ? error.message : String(error), true, "目录必须位于 Hexo 仓库内且不能是符号链接");
+      }
     }
     const git = new GitService(this.runner, settings.gitExecutable);
     const snapshot = await git.inspect(repositoryPath);
@@ -53,11 +59,9 @@ export class EnvironmentDetector {
     add("git-branch", "分支 / upstream", snapshot.branch ? "pass" : "failure", `${snapshot.branch || "detached"} / ${snapshot.upstream || "未配置"} · ahead ${snapshot.ahead} / behind ${snapshot.behind}`, !snapshot.branch, "切换到普通分支");
     add("git-remote", "Git remote", snapshot.remote ? "pass" : "warning", snapshot.remote || "未配置", false, "Push 前需要 upstream remote，或在高级设置中覆盖");
     const nodeVersion = await this.runner.run({ executable: settings.nodeExecutable, args: ["--version"], cwd: repositoryPath, timeoutMs: 10_000 }).then((r) => r.stdout.trim()).catch(() => "");
-    const npxVersion = await this.runner.run({ executable: settings.npxExecutable, args: ["--version"], cwd: repositoryPath, timeoutMs: 10_000 }).then((r) => r.stdout.trim()).catch(() => "");
     const localHexoCli=await fs.access(path.join(repositoryPath,"node_modules","hexo","bin","hexo")).then(()=>true).catch(()=>false);
     add("node", "Node", nodeVersion ? "pass" : "failure", nodeVersion || "不可用", !nodeVersion, "在高级设置中指定 Node 路径");
-    add("hexo-cli","本地 Hexo CLI",localHexoCli?"pass":"warning",localHexoCli?"node_modules/hexo/bin/hexo":"未安装到 node_modules",!localHexoCli&&!npxVersion,"在 Hexo 仓库执行 npm install");
-    add("npx", "npx（回退）", npxVersion ? "pass" : localHexoCli?"warning":"failure", npxVersion || (localHexoCli?"不可用，但本地 Hexo CLI 可直接执行":"不可用"), !npxVersion&&!localHexoCli, "必要时在高级设置中指定 npx 路径");
+    add("hexo-cli","本地 Hexo CLI",localHexoCli?"pass":"failure",localHexoCli?"node_modules/hexo/bin/hexo":"未安装到 node_modules",!localHexoCli,"在 Hexo 仓库执行 npm install");
     const hookPath=path.join(repositoryPath,".git","hooks","pre-commit");
     const hookContent=await fs.readFile(hookPath,"utf8").catch(()=>""); const hookPresent=Boolean(hookContent);
     const checks=[/alt/i.test(hookContent)?"图片 alt":"",/tags/i.test(hookContent)?"tags":"",/keywords/i.test(hookContent)?"keywords":""].filter(Boolean);
