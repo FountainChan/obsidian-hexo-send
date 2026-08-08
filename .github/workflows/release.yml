@@ -3,10 +3,12 @@ name: Release
 on:
   push:
     tags:
-      - "v*"
+      - "*"
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 concurrency:
   group: release-${{ github.ref }}
@@ -40,7 +42,7 @@ jobs:
           node --input-type=module <<'NODE'
           import { readFileSync } from "node:fs";
 
-          const tagVersion = process.env.GITHUB_REF_NAME.replace(/^v/, "");
+          const tagVersion = process.env.GITHUB_REF_NAME;
           const packageVersion = JSON.parse(readFileSync("package.json", "utf8")).version;
           const manifestVersion = JSON.parse(readFileSync("manifest.json", "utf8")).version;
 
@@ -55,7 +57,7 @@ jobs:
         shell: bash
         run: |
           node scripts/package.mjs
-          version="${GITHUB_REF_NAME#v}"
+          version="$GITHUB_REF_NAME"
           mkdir -p release
           cp dist/hexo-send/main.js release/main.js
           cp dist/hexo-send/manifest.json release/manifest.json
@@ -63,12 +65,21 @@ jobs:
           (cd dist/hexo-send && zip -9 -r "../../release/hexo-send-${version}.zip" .)
           (cd release && sha256sum main.js manifest.json styles.css "hexo-send-${version}.zip" > SHA256SUMS.txt)
 
+      - name: Attest release assets
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            release/main.js
+            release/manifest.json
+            release/styles.css
+            release/hexo-send-*.zip
+
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          version="${GITHUB_REF_NAME#v}"
+          version="$GITHUB_REF_NAME"
           gh release create "$GITHUB_REF_NAME" \
             release/main.js \
             release/manifest.json \
